@@ -49,12 +49,23 @@ I'm setting a `$result` variable, that can only be `null` or an instance of `Res
 
 Now that the listener is defined and registered, we start the `Loop`, and wait until it's stopped by the listener. Now that we've got a return value for our `Prompt`, we remove the listeners, do some checks, and return the `Result`.
 
-Great! We're reading from `STDIN` on the event loop, and don't do any work until we recieve a `data` event. Perfect. But how is this `ReadableResourceStream` doing this in a way that doesn't block the main process? Well let's take a look.
+Great! We're reading from `STDIN` on the event loop, and we don't do any work until we recieve a `data` event. Perfect. But how is this `ReadableResourceStream` doing this in a way that doesn't block the main process? Well let's take a look.
 {{ click through to `ReadableResourceStream:class` }}
+We've got some private properties, then in the `constructor` we take the `$stream`, check that it's a `resource`, check that our `$stream` is open in **read mode**, and then here's where the _magic_ happens: **we set the stream to 'non-blocking' mode**. From what I've been able to determine, what this does is makes php's `fread()` function just return `false` if there's nothing in the buffer. There's no waiting around for input. After that we assign some value to properties, then we call the `resume()` method, {{ scroll down }} which just adds our `read stream` to the event loop along with a `handler` and sets `$listening` to `true`.
 
+If we look at the handler
+{{ scroll to `handleData` method }}
+we set some error handling stuff, then we get the `contents` of our `stream`. We do some more error handling stuff, then if the `contents` of the `stream` isn't an `end of file` or an empty string it `emits` the `data event` that we were listening for in our `runLoop()` method.
+{{ close `ReadableResourceStream::class` }}
 
+Alright!
+So
+We're not being blocked by waiting for keypresses on `STDIN`.
+Great! That's awesome! But what does that get us?
+Well I think now I can finally show you all some examples
 ---
-Now let's look at some examples
+
+{{ window > DocsSearchCommand (echo-terminal) }}
 	
 # Http calls
 Scout Search
