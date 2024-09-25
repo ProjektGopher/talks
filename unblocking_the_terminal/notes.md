@@ -1,3 +1,6 @@
+So, I only finished writing this talk about an hour ago, which means that you might see me staring uncomfortably at the prompter waiting for it to catch up, or I might speed up my speech if I'm falling behind. And this is literally my _first_ talk. So bear with me.
+---
+
 {{ set browser to LenWoodward_com.test }}
 Hi everyone, my name is Len Woodward, online I go by the handle ProjektGopher, and I've been writing code since about 2003.
 
@@ -171,4 +174,19 @@ So, this is all really cool and everything, but there _is_ a problem.
 
 {{ switch to full cam }}
 
+To have our console output not 'tear' I've registered a custom `ConsoleOutput` implementation that satisfies our contract that uses reactPHP's `WritableResourceStream` that gets passed our `STDOUT` stream. This makes writing to the console non-blocking as well. And this will work perfectly fine most of the time.
+**But**
+When Laravel boots, it statically registers it's _own_ `ConsoleOutput` implementation so that it can track the number of `newlines` rendered at the end of the previous output. This lets Laravel track whether the next `Prompt` needs to be _prepended_ with extra spacing or not. This might not sounds like a major concern, but, I mean, it's Laravel. Are we surprised that they're putting in the effort to make things beautiful?
 
+Now, because I'm registering my implementation on _my_ abstract class, the net effect is that we might not get the spacing we would normally expect.
+
+But my ultimate plan is to have this be the default looping mechanism for _all_ prompts. So I've got some more work to do before this will be possible using Laravel's package directly.
+
+For now, if you want to experiment, you'll be able to get all of this goodness by installing `artisan-build/community-prompts`.
+
+This is a package that Ed and I set up to provide a home for the prompts the community's built that Taylor wasn't willing to adopt the maintenance burden of. We don't have a ton of components yet, and we need some help filling in documentation, but if you want to dig into this stuff - not even the async stuff, but just useful components, we'd love some new PRs.
+---
+
+I think at this point, I can try to take some questions. Was there anything I covered too quickly, or something that didn't really make sense?
+
+{{ pause prompter }}
