@@ -133,16 +133,42 @@ So we get the response `body`, do some checks, and then we register some listene
 
 If our `body` recieves a `data` event, we're going to `process` that because sometimes `chunks` will come in multiple at a time, then we loop over them, take the `content` out, and render the component. We've got some other listeners as well, but those are pretty straight forward.
 
-If we wanted to make this more interactive, we could have this response displayed in a `scrollable` window, with a text input below where we can type out our next message while this one still coming in, since it's all just being done on the event loop and none of this is blocking anymore.
+If we wanted to make this more interactive, we could have this response displayed in a `scrollable` window, with a text input below where we can type out our next message while this one is still coming in, since it's all just being done on the event loop and none of this is blocking anymore.
 
 I don't have that set up in _this_ demo, but I **do** have something similar:
 ---
 
-# WebSockets
-real time chat
+I'm gonna pause the prompter, cause it's tough to time this one out.
+{{ pause prompter, terminal > art chat, unpause }}
 
-# Flappy Bird
+So, full disclosure, there's not much code to examine in this demo, since this one is being faked using timers on our `Loop`, but I'm working on a package called `Resonance` which is essentially just a PHP port of `Laravel/Echo` and brings us the ability to use `websockets` to interact with apps using the `Pusher` protocol, which is what `Reverb` uses, in our terminal.
 
-# Tetris
+With all the mechanisms I've got set up already in this component and its renderer, it would actually be super easy to listen for these specific events and get this exact experience once `Resonance` is finished.
 
-# Why you can't use any of this yet... kind of.
+Where I think this particular example could shine is adding a `help` command to a tool, so instead of going to a support website and clicking on a 'help bubble', where we'd be connected with a support agent, then having to pass info and context back and forth, we could chat directly in our development environment, where we've got access to the filesystem. We could send our `.env`, a config file, or an entire class, directly to the agent, adding important context and speeding up the whole process.
+
+We can also add a `periodic timer` which is great for 'interval based rendering', which is a fancy way of saying that we can use it control the framerate at which we're rendering terminal output.
+---
+
+{{ pause, terminal > art flap, unpause }}
+
+This is being rendered at ten frames per second, but it could easily be moved up or down. Every time we hit that periodic timer we're repainting the entire frame, so we can apply gravity to our bird, flap their wings by alternating between sprites, move the pipes, and update the scrore. If we're diligent about working with multibyte characters, we could use box characters or block characters from unicode to make this look even better. I didn't take the time to do that for this demo, I wrote this one in about three hours, but I did for the next one.
+---
+
+{{ terminal > art tetris }}
+Here we're rendering again at about ten frames per second. We have a working 7-bag randomizer, we can slide our pieces left and right, we can add garbage to the field,
+
+and we can place our pieces.
+
+{{ place two or three pieces, ESC }}
+
+This one actually took a **lot** of code, and there's still a **ton** to do, but I was able to get this working in about 8 hours worth of work. I've defined some custom console colors, I'm using multibyte block characters, I'm doing lots of fun stuff with `zipping` together collections and mapping over them, if we were using websockets we could _easily_ have a second matrix that's controlled remotely, so we could have real-time multiplayer tetris in the terminal.
+
+This really lets you do some crazy fun stuff if your rendering isn't being blocked by anything.
+
+So, this is all really cool and everything, but there _is_ a problem.
+---
+
+{{ switch to full cam }}
+
+
