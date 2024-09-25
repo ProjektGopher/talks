@@ -117,7 +117,7 @@ This prompt doesn't do anything other than rendering the response we get from Op
 {{ wait }}
 
 Well, that experience sucked. Why didn't it work?
-We're still using a browser implementation that's blocking my nature. ReactPHP offers us a non-blocking browser. Now, there _is_ a package to make this new browser PSR-18 compatible, but for now let's just skip the `OpenAI` package and use the api directly.
+We're still using a browser implementation that's blocking my nature. We could use a spinner to tell the user that something is going on behind the scenes, but the experience we wanted was to render each `chunk` to the terminal as we get it. ReactPHP offers us a non-blocking browser. Now, there _is_ a package to make this new browser PSR-18 compatible, but for now let's just skip the `OpenAI` package and use the api directly.
 
 {{ comment out bad code, comment in good code }}
 
@@ -126,15 +126,23 @@ Here's our _new_ implementation. First let's see it work, then we'll look at the
 
 {{ wait }}
 
-Much better.
+Much better. Now let's see how it works.
+We set the URL, we set the headers, we set the body, we set the `stream` to `true`, we instantiate react's `Browser`, and we send off a request using this `requestStreaming()` method. This method  sends an request, receives a streaming response _without_ buffering the response body, and returns a `promise`. This let's us work on the streamed response as it comes in.
 
+So we get the response `body`, do some checks, and then we register some listeners.
 
-# Streamed output
-ai thing
-	blocking streamed output, have to wait for everything before acting
-	"is this thing working?" could use a spinner to indicate that stuff is still happening.
-	can now render one chunk at a time
-	extra credit- does not block user input
+If our `body` recieves a `data` event, we're going to `process` that because sometimes `chunks` will come in multiple at a time, then we loop over them, take the `content` out, and render the component. We've got some other listeners as well, but those are pretty straight forward.
+
+If we wanted to make this more interactive, we could have this response displayed in a `scrollable` window, with a text input below where we can type out our next message while this one still coming in, since it's all just being done on the event loop and none of this is blocking anymore.
+
+I don't have that set up in _this_ demo, but I **do** have something similar:
+---
 
 # WebSockets
 real time chat
+
+# Flappy Bird
+
+# Tetris
+
+# Why you can't use any of this yet... kind of.
