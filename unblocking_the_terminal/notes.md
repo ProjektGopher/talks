@@ -62,10 +62,39 @@ Alright!
 So
 We're not being blocked by waiting for keypresses on `STDIN`.
 Great! That's awesome! But what does that get us?
-Well I think now I can finally show you all some examples
+Well now that we're finally done with my `Laravel/Prompts` fork, I think I can show you all some examples
 ---
 
-{{ window > DocsSearchCommand (echo-terminal) }}
+{{ window > composer.json (echo-terminal) }}
+{{ scroll down }}
+In this project I'm just linking `laravel/prompts` to my local fork.
+{{ close buffer, open `DocsSearchCommand::class` }}
+This is just a bone stock `SearchPrompt` from `laravel/prompts`. Now I know that `artisan` already has a `docs` command. I'm just using this as an example because it's a convenient endpoint to use. This can be literally any scout powered endpoint for any website that has search.
+
+Now in order to get our list of options for our `SearchPrompt`, we're grabbing the search url and building a search payload using the prompt's input. We're `POST`ing to that endpoint, collecting the results, mapping over them, and returning them. Whatever. Not important.
+
+{{ terminal > art docs:search > reverb }}
+
+This works just fine, but it's a little choppy.
+Let's exaggerate that by manually adding some delay in here, cause maybe this endpoint is far away, or it's hosted on some slower hardware.
+
+{{ add `sleep(1)` above `[$url, $payload]` }}
+
+{{ terminal > art docs:search > reverb }}
+
+Now _this_ is a way worse experience. When we type the first character of our search, we're sending out a search request, and as we continue typing none of our next keypresses are showing up in the terminal because we're waiting for that search response to come back, which is a blocking operation. So those keypresses are being buffered, then they all show up at once when that response has come back, and we immediately send out another search request with the updated search string, and again none of our typing shows up until that's done.
+
+So what do we do here? Well, let's just debounce posting this search request.
+
+{{ replace `SearchPrompt` with `ScoutPrompt` }}
+{{ add `debounce: 300` under `label` param }}
+{{ terminal > art docs:search > reverb }}
+
+Way better. At this point we don't even really care that the HTTP request is a blocking operation since we're basically waiting until we're done typing to send it off. So let's take a look at how we're now using the event loop to `debounce` this input.
+
+{{ open `ScoutPrompt::class` }}
+
+
 	
 # Http calls
 Scout Search
