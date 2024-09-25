@@ -3,6 +3,8 @@ Hi everyone, my name is Len Woodward, online I go by the handle ProjektGopher, a
 
 I haven't been _good_ at writing code since 2003... I'd say I got properly good maybe about five years ago.
 
+I wrote a tool called `Whisky` for managing git hooks, but fully in PHP. It's currently got a little over 200 stars, and 30k downloads. I'm working on a tool called `Conductor` which is basically `npx` but for `composer`.
+And I've got a few other open source projects on the go.
 I'm currently starting a two-person agency with my friend Ed Grosvenor, named Artisan Build,
 {{ set browser to https://artisan.build }}
 so if you or anyone you know has any **tough** problems to solve, then let us know. We'd love to partner up on some interesting projects. We're also announcing a really cool initiative soon, so keep an eye out for that. 
@@ -67,7 +69,7 @@ Well now that we're finally done with my `Laravel/Prompts` fork, I think I can s
 
 {{ window > composer.json (echo-terminal) }}
 {{ scroll down }}
-In this project I'm just linking `laravel/prompts` to my local fork.
+Here you can see that I'm just linking `laravel/prompts` to my local fork.
 {{ close buffer, open `DocsSearchCommand::class` }}
 This is just a bone stock `SearchPrompt` from `laravel/prompts`. Now I know that `artisan` already has a `docs` command. I'm just using this as an example because it's a convenient endpoint to use. This can be literally any scout powered endpoint for any website that has search.
 
@@ -94,15 +96,38 @@ Way better. At this point we don't even really care that the HTTP request is a b
 
 {{ open `ScoutPrompt::class` }}
 
+There's a lot of this class that we're not going to bother looking at, since it's basically just a copy-paste of `Laravel/Prompts` `SearchPrompt`.
+In our `constructor` we're instanciating our `Debouncer` with a delay, and then we're passing `$this->search()` to the `callback` parameter as a `callable`. If you've never seen these three dots, this is 'first class callable syntax'. It lets you pass a callable directly instead of having to nest it inside of a function that just calls it and doesn't do anything else. If we scroll down you can see that our `default` action when typing is this `doThings()` method, which is just running this short list of callables in order. I could probably have kept this as an immediately invoked long function, but whatever.
 
-	
-# Http calls
-Scout Search
-	blocking, explain the network, how is this working
-	non-blocking, can get rate limited, can overwhelm the network
-	* what is debouncing *
-		* we wait to send off a request until the user indicates that they're actually ready to send it. "ima let you finish before I act on this."
-	debounce, why this can't work in blocking mode
+So what's this `Debouncer` class doing.
+{{ set VSC to `Debouncer::class` }}
+
+We've got a `static debounce()` method, which is what we called in our `Prompt`, and this is just a static constructor. We're `promoting` the delay and the callback, then we're getting and assigning the `Loop` from reactPHP. When we `invoke()` the debouncer we're **cancelling** any timer that's been previously registered by the debouncer, then we register a new timer with the same delay, and the same callback. It's literally that easy. The event loop gives us this `addTimers` method that allows us to reliably and accurate schedule tasks.
+
+This is a super easy win. We don't really care that our `request` is still a blocking operation here, but next let's look at a usecase where we **do** care.
+{{ set VSC to `DemoCommand::class` }}
+---
+
+In here, we're just collecting an ai prompt from the user, then passing that a new `StreamedResponsePrompt`. Let's take a look.
+{{ set VSC to `StreamedResponsePrompt::class `}}
+
+This prompt doesn't do anything other than rendering the response we get from OpenAI. We get our API key, we make a `Client`, we request a **streamed** response from the `chat` endpoint, then we loop over the stream, extract the chunk, append it to our output, and render. Easy enough. Let's see how it works in the terminal.
+{{ terminal > art ai }}
+
+{{ wait }}
+
+Well, that experience sucked. Why didn't it work?
+We're still using a browser implementation that's blocking my nature. ReactPHP offers us a non-blocking browser. Now, there _is_ a package to make this new browser PSR-18 compatible, but for now let's just skip the `OpenAI` package and use the api directly.
+
+{{ comment out bad code, comment in good code }}
+
+Here's our _new_ implementation. First let's see it work, then we'll look at the code again.
+{{ terminal > art ai }}
+
+{{ wait }}
+
+Much better.
+
 
 # Streamed output
 ai thing
