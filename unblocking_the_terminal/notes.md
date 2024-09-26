@@ -6,11 +6,16 @@ Hi everyone, my name is Len Woodward, online I go by the handle ProjektGopher, a
 
 I haven't been _good_ at writing code since 2003... I'd say I got properly good maybe about five years ago.
 
+{{ scroll down }}
+
 I wrote a tool called `Whisky` for managing git hooks, but fully in PHP. It's currently got a little over 200 stars, and 30k downloads. I'm working on a tool called `Conductor` which is basically `npx` but for `composer`.
 And I've got a few other open source projects on the go.
+
 I'm currently starting a two-person agency with my friend Ed Grosvenor, named Artisan Build,
 {{ set browser to https://artisan.build }}
 so if you or anyone you know has any **tough** problems to solve, then let us know. We'd love to partner up on some interesting projects. We're also announcing a really cool initiative soon, so keep an eye out for that. 
+
+{{ set OBS to full cam }}
 
 What I'm gonna try to show you **today** is what possibilities open up when we start using the `ReactPHP` event loop in our terminal commands.
 
@@ -36,7 +41,10 @@ So. What problems are we trying to solve, and what tools are we going to use to 
 
 Let's start with the easiest problem in `Laravel/Prompts`, which is the 'looping mechanism'.
 
+{{ set OBS to RightCam }}
 {{ set VSC to `Prompt::class` }}
+{{ scroll to `prompt()` }}
+
 Every prompt extends this base `abstract Prompt` class, and if we look through the `prompt()` method we see some pretty standard looking setup steps: capturing newlines, setting fallbacks, checking whether we're in an interactive mode, hiding the cursor, doing an initial render, and then we're registering a nice fat callback to handle our keypresses inside of a call to our **looping mechanism**.
 
 {{ scroll VSC to `runLoop()` }}
@@ -80,6 +88,9 @@ Now in order to get our list of options for our `SearchPrompt`, we're grabbing t
 
 {{ terminal > art docs:search > reverb }}
 
+
+
+
 This works just fine, but it's a little choppy.
 Let's exaggerate that by manually adding some delay in here, cause maybe this endpoint is far away, or it's hosted on some slower hardware.
 
@@ -92,32 +103,49 @@ Now _this_ is a way worse experience. When we type the first character of our se
 So what do we do here? Well, let's just debounce posting this search request.
 
 {{ replace `SearchPrompt` with `ScoutPrompt` }}
+
+
 {{ add `debounce: 300` under `label` param }}
+
+
 {{ terminal > art docs:search > reverb }}
+
 
 Way better. At this point we don't even really care that the HTTP request is a blocking operation since we're basically waiting until we're done typing to send it off. So let's take a look at how we're now using the event loop to `debounce` this input.
 
 {{ open `ScoutPrompt::class` }}
 
 There's a lot of this class that we're not going to bother looking at, since it's basically just a copy-paste of `Laravel/Prompts` `SearchPrompt`.
-In our `constructor` we're instanciating our `Debouncer` with a delay, and then we're passing `$this->search()` to the `callback` parameter as a `callable`. If you've never seen these three dots, this is 'first class callable syntax'. It lets you pass a callable directly instead of having to nest it inside of a function that just calls it and doesn't do anything else. If we scroll down you can see that our `default` action when typing is this `doThings()` method, which is just running this short list of callables in order. I could probably have kept this as an immediately invoked long function, but whatever.
+In our `constructor` we're instanciating our `Debouncer` with a delay, and then we're passing `$this->search()` to the `callback` parameter as a `callable`.
+
+If you've never seen these three dots, this is 'first class callable syntax'. It lets you pass a callable directly instead of having to nest it inside of a function that just calls it and doesn't do anything else.
+
+If we scroll down you can see that our `default` action when typing is this `doThings()` method, which is just running this short list of callables in order. I could probably have kept this as an immediately invoked long function, but whatever.
 
 So what's this `Debouncer` class doing.
 {{ set VSC to `Debouncer::class` }}
 
-We've got a `static debounce()` method, which is what we called in our `Prompt`, and this is just a static constructor. We're `promoting` the delay and the callback, then we're getting and assigning the `Loop` from reactPHP. When we `invoke()` the debouncer we're **cancelling** any timer that's been previously registered by the debouncer, then we register a new timer with the same delay, and the same callback. It's literally that easy. The event loop gives us this `addTimers` method that allows us to reliably and accurate schedule tasks.
+We've got a `static debounce()` method, which is what we called in our `Prompt`, and this is just a static constructor. We're `promoting` the delay and the callback, then we're getting and assigning the `Loop` from reactPHP.
+
+When we `invoke()` the debouncer we're **cancelling** any timer that's been previously registered by the debouncer, then we register a new timer with the same delay, and the same callback.
+
+It's literally that easy. The event loop gives us this `addTimers` method that allows us to reliably and accurate schedule tasks.
 
 This is a super easy win. We don't really care that our `request` is still a blocking operation here, but next let's look at a usecase where we **do** care.
 {{ set VSC to `DemoCommand::class` }}
 ---
 
-In here, we're just collecting an ai prompt from the user, then passing that a new `StreamedResponsePrompt`. Let's take a look.
+In here, we're just collecting an ai prompt from the user, then passing that to a new `StreamedResponsePrompt`. Let's take a look.
 {{ set VSC to `StreamedResponsePrompt::class `}}
 
 This prompt doesn't do anything other than rendering the response we get from OpenAI. We get our API key, we make a `Client`, we request a **streamed** response from the `chat` endpoint, then we loop over the stream, extract the chunk, append it to our output, and render. Easy enough. Let's see how it works in the terminal.
 {{ terminal > art ai }}
 
 {{ wait }}
+
+
+
+
 
 Well, that experience sucked. Why didn't it work?
 We're still using a browser implementation that's blocking my nature. We could use a spinner to tell the user that something is going on behind the scenes, but the experience we wanted was to render each `chunk` to the terminal as we get it. ReactPHP offers us a non-blocking browser. Now, there _is_ a package to make this new browser PSR-18 compatible, but for now let's just skip the `OpenAI` package and use the api directly.
@@ -128,6 +156,12 @@ Here's our _new_ implementation. First let's see it work, then we'll look at the
 {{ terminal > art ai }}
 
 {{ wait }}
+
+
+
+
+
+
 
 Much better. Now let's see how it works.
 We set the URL, we set the headers, we set the body, we set the `stream` to `true`, we instantiate react's `Browser`, and we send off a request using this `requestStreaming()` method. This method  sends an request, receives a streaming response _without_ buffering the response body, and returns a `promise`. This let's us work on the streamed response as it comes in.
